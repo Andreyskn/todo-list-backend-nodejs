@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import chalk from 'chalk';
+import { startOfTomorrow, isPast } from 'date-fns';
 
 mongoose.connect('mongodb://localhost:27017/test', { useNewUrlParser: true });
 
@@ -30,18 +31,50 @@ app.use((req, res, next) => {
 })
 
 app.post('/api/save', (req, res) => {
+  const todoList = processData(req.body);
+
   TodoList.deleteOne()
-    .then(() => new TodoList({ todoList: req.body }).save())
-    .then(() => res.send('saved'))
+    .then(() => new TodoList({ todoList }).save())
+    .then(() => res.sendStatus(200))
 });
+
+const processData = (data) => {
+  const { tabs } = data;
+
+  Object.keys(tabs).map((key) => {
+    const tabData = tabs[key];
+
+    if (tabData.daily) {
+      tabs[key] = {...tabData, timestamp: startOfTomorrow().setHours(3)};
+    }
+  })
+
+  return data;
+}
 
 app.get('/api/init', (req, res) => {
   TodoList.findOne(null, (err, data) => {
     if (err) return;
     if (data) {
       const { todoList } = data;
-      return res.send(todoList);
+      return res.send(handleDailyRefresh(todoList));
     }
     return res.sendStatus(204);
   });
 });
+
+const handleDailyRefresh = (data) => { // TODO: try to optimize, strip timestamps from response
+  const { tabs, tasks } = data;
+
+  Object.keys(tabs).map((key) => {
+    const { timestamp, taskIds } = tabs[key];
+
+    if (timestamp && isPast(timestamp)) {
+      taskIds.map((id) => {
+        tasks[id].done = false;
+      })
+    }
+  })
+
+  return data;
+}
