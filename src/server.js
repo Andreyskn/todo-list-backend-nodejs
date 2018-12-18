@@ -31,26 +31,10 @@ app.use((req, res, next) => {
 })
 
 app.post('/api/save', (req, res) => {
-  const todoList = processData(req.body);
-
   TodoList.deleteOne()
-    .then(() => new TodoList({ todoList }).save())
+    .then(() => new TodoList({ todoList: req.body }).save())
     .then(() => res.sendStatus(200))
 });
-
-const processData = (data) => {
-  const { tabs } = data;
-
-  Object.keys(tabs).map((key) => {
-    const tabData = tabs[key];
-
-    if (tabData.daily) {
-      tabs[key] = {...tabData, timestamp: startOfTomorrow().setHours(3)};
-    }
-  })
-
-  return data;
-}
 
 app.get('/api/init', (req, res) => {
   TodoList.findOne(null, (err, data) => {
@@ -63,18 +47,17 @@ app.get('/api/init', (req, res) => {
   });
 });
 
-const handleDailyRefresh = (data) => { // TODO: try to optimize, strip timestamps from response
-  const { tabs, tasks } = data;
+const handleDailyRefresh = (data) => {
+  const { tasks } = data;
 
-  Object.keys(tabs).map((key) => {
-    const { timestamp, taskIds } = tabs[key];
+  Object.keys(tasks).map((key) => {
+    const { refreshTime } = tasks[key];
 
-    if (timestamp && isPast(timestamp)) {
-      taskIds.map((id) => {
-        tasks[id].done = false;
-      })
+    if (refreshTime && isPast(refreshTime)) {
+        tasks[key].done = false;
+				tasks[key].refreshTime = startOfTomorrow().setHours(3);
     }
-  })
+  });
 
   return data;
 }
