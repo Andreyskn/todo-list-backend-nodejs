@@ -13,7 +13,7 @@ db.on('open', () => console.log(chalk.yellow('Connected to database.')));
 
 const todoListSchema = new mongoose.Schema({
   todoList: {},
-});
+}, { minimize: false });
 
 const TodoList = mongoose.model('TodoList', todoListSchema);
 
@@ -55,7 +55,7 @@ const handleDailyRefresh = (data) => {
 
     if (refreshTime && isPast(refreshTime)) {
         tasks[key].done = false;
-				tasks[key].refreshTime = startOfTomorrow().setHours(3);
+        tasks[key].refreshTime = startOfTomorrow().setHours(3);
     }
   });
 
